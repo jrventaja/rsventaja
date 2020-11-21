@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using RSVentaja.Domain.Entity;
@@ -11,10 +12,14 @@ namespace RSVentaja.Domain.Service
     public class PolicyService : IPolicyService
     {
         private readonly IPolicyRepository _policyRepository;
+        private readonly IS3Repository _s3Repository;
+        private readonly ICrypRepository _crypRepository;
 
-        public PolicyService (IPolicyRepository policyRepository)
+        public PolicyService (IPolicyRepository policyRepository, IS3Repository s3Repository, ICrypRepository crypRepository)
         {
             _policyRepository = policyRepository;
+            _s3Repository = s3Repository;
+            _crypRepository = crypRepository;
         }
 
         public Tuple<Policy, File> GetPolicyFromRequest(AddPolicyRequest addPolicyRequest)
@@ -32,12 +37,13 @@ namespace RSVentaja.Domain.Service
 
         public async Task<bool> AddPolicy(Policy policy, File file)
         {
-            return await _policyRepository.AddPolicy(policy, file);
-        }
-
-        public async Task<File> GetFile(int policyId)
-        {
-            return await _policyRepository.GetFile(policyId);
+            var id = await _policyRepository.AddPolicy(policy);
+            if (id > 0)
+            {
+                await _s3Repository.StoreFile(_crypRepository.SignData(id.ToString()), file);
+                return true;
+            }
+            return false;
         }
 
         public async Task<IEnumerable<Policy>> GetPoliciesLast30Days()

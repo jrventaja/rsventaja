@@ -15,8 +15,6 @@ namespace RSVentaja.Domain.Service
         Tuple<Policy, File> GetPolicyFromRequest(AddPolicyRequest addPolicyRequest);
 
         Task<bool> AddPolicy(Policy policy, File file);
-
-        Task<File> GetFile(int policyId);
         Task<bool> UpdateRenewalStarted(int policyId, bool status);
     }
 }

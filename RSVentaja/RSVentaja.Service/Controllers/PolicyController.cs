@@ -52,22 +52,6 @@ namespace RSVentaja.Controllers
             }
             return Unauthorized();
         }
-        [Route("{policyId}/download")]
-        [HttpGet]
-        public async Task<ActionResult<GetFileResponse>> GetFile(int policyId)
-        {
-            if (Request.Headers.TryGetValue("Token", out var value) && await _authenticationService.ValidateToken(value.First()))
-            {
-                var file = await _policyService.GetFile(policyId);
-                if (file == null)
-                    return Ok("No file found for the given id.");
-                else if (!file.Valid)
-                    return Ok("File corrupted");
-                var response = new GetFileResponse(file);
-                return Ok(response);
-            }
-            return Unauthorized();
-        }
         [Route("updateRenewal")]
         [HttpPost]
         public async Task<ActionResult<GetFileResponse>> UpdateRenewalStarted([FromBody]UpdateRenewalRequest request)

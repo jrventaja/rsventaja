@@ -13,6 +13,7 @@ namespace RSVentaja.Domain.ValueObjects
         public bool RenewalStarted { get; set; }
         public string Insurer { get; private set; }
         public int InsurerId { get; private set; }
+        public string FileName { get; set; }
 
         public Policy( int policyId, Name customerName, DateTime startDate, DateTime endDate, string insurer)
         {

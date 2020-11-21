@@ -24,9 +24,15 @@ namespace RSVentaja.Service.Controllers
         [HttpPost]
         public async Task<ActionResult> GetToken([FromBody]TokenRequest tokenRequest)
         {
-            var userTokenData = await _authenticationService.GetToken(tokenRequest.Username, tokenRequest.Password);
-            if (userTokenData != null)
-                return Ok(userTokenData);
+            try
+            {
+                var userTokenData = await _authenticationService.GetToken(tokenRequest.Username, tokenRequest.Password);
+                if (userTokenData != null)
+                    return Ok(userTokenData);
+            } catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
             return Unauthorized();
         }
 

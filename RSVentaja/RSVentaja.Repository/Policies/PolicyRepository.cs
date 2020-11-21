@@ -11,64 +11,33 @@ namespace RSVentaja.Repository.Policies
     public class PolicyRepository : IPolicyRepository
     {
         private string _connectionString;
+        private readonly ICrypRepository _crypRepository;
 
-        public PolicyRepository(string connectionString)
+        public PolicyRepository(ICrypRepository crypRepository, string connectionString)
         {
+            _crypRepository = crypRepository;
             _connectionString = connectionString;
         }
 
-        public async Task<bool> AddPolicy(Policy policy, File file)
+        public async Task<int> AddPolicy(Policy policy)
         {
-            var changedLines = 0;
+            var id = 0;
             using (MySqlConnection mySqlConnection = new MySqlConnection(_connectionString))
             {
                 try
                 {
                     mySqlConnection.Open();
-                    string query = @"INSERT INTO Apolices (Nome, Placa, Inicio, Fim, Arquivo, nomeArquivo, idSeguradoras, boolCalculado) VALUES (@name, @plate, @startDate, @endDate, @file, @fileName, @insurerId, false)";
+                    string query = @"INSERT INTO Apolices (Nome, Placa, Inicio, Fim, idSeguradoras, boolCalculado) VALUES (@name, @plate, @startDate, @endDate, @insurerId, false); SELECT LAST_INSERT_ID();";
                     var cmd = new MySqlCommand(query, mySqlConnection);
                     var name = string.IsNullOrEmpty(policy.CustomerName.LastName) ? policy.CustomerName.FirstName : $"{policy.CustomerName.FirstName} { policy.CustomerName.LastName}";
                     cmd.Parameters.AddWithValue("@name", name);
                     cmd.Parameters.AddWithValue("@plate", policy.AdditionalInfo);
                     cmd.Parameters.AddWithValue("@startDate", policy.StartDate);
                     cmd.Parameters.AddWithValue("@endDate", policy.EndDate);
-                    cmd.Parameters.AddWithValue("@file", file.FileData);
-                    cmd.Parameters.AddWithValue("@fileName", file.FileName);
                     cmd.Parameters.AddWithValue("@insurerId", policy.InsurerId);
-                    changedLines = await cmd.ExecuteNonQueryAsync();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-                finally
-                {
-                    mySqlConnection.Close();
-                }
-
-            }
-            return changedLines > 0;
-        }
-
-        public async Task<File> GetFile(int policyId)
-        {
-            using (MySqlConnection mySqlConnection = new MySqlConnection(_connectionString))
-            {
-                try
-                {
-                    mySqlConnection.Open();
-                    string query = "SELECT nomeArquivo, Arquivo FROM Apolices where idApolices = @policyId";
-                    MySqlCommand cmd = new MySqlCommand(query, mySqlConnection);
-                    cmd.Parameters.AddWithValue("@policyId", policyId);
                     var reader = await cmd.ExecuteReaderAsync();
-                    if (reader.Read())
-                    {
-                        byte[] buffer = new byte[reader.GetBytes(1, 0L, null, 0, int.MaxValue)];
-                        reader.GetBytes(1, 0L, buffer, 0, buffer.Length);
-                        var file = new File(reader.GetString(0), buffer);
-                        reader.Close();
-                        return file;
-                    }
+                    reader.Read();
+                    id = reader.GetInt32(0);
                 }
                 catch (Exception e)
                 {
@@ -78,8 +47,9 @@ namespace RSVentaja.Repository.Policies
                 {
                     mySqlConnection.Close();
                 }
+
             }
-            return null;
+            return id;
         }
 
         public async Task<IEnumerable<Policy>> GetPolicies(string searchTerm, DateTime startDate, DateTime endDate)
@@ -103,6 +73,7 @@ namespace RSVentaja.Repository.Policies
                     while (reader.Read())
                     {
                         var newPolicy = new Policy(reader.GetInt32(0), new Name(reader.GetString(1)), reader.GetDateTime(3), reader.GetDateTime(4), reader.GetString(6));
+                        newPolicy.FileName = $"{_crypRepository.SignData(newPolicy.PolicyId.ToString())}.pdf";
                         newPolicy.RenewalStarted = reader.GetBoolean(5);
                         newPolicy.AdditionalInfo = reader.GetString(2);
                         policiesList.Add(newPolicy);

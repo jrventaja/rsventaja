@@ -8,9 +8,8 @@ namespace RSVentaja.Domain.Repository
 {
     public interface IPolicyRepository
     {
-        Task<bool> AddPolicy(Policy policy, File file);
+        Task<int> AddPolicy(Policy policy);
         Task<IEnumerable<Policy>> GetPolicies(string query, DateTime startDate, DateTime endDate);
-        Task<File> GetFile(int policyId);
         Task<bool> UpdateRenewalStarted(int policyId, bool status);
     }
 }
